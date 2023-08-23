@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+   crossorigin=""/>
+ <!-- Make sure you put this AFTER Leaflet's CSS -->
+ <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+   crossorigin=""></script>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <!-- <div class="position-fixed top-0 start-0">
+        <div class="card border-secondary mb-3" style="max-width: 18rem;">
+          <div class="card-header" id="welname"></div>
+          <div class="card-body text-success">
+            <h5 class="card-title fw-bold" >聊天室列表</h5>
+            <p class="card-text" id="userList"></p>
+          </div>
+        </div>
+      </div> -->
+      <div class="row vh-100 align-items-center justify-items-center">
+        <div class="col-sm-6 col-md-4">
+          <div class="position-absolute bottom-0 end-0 z-3">
+            <p>
+              <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWidthExample" aria-expanded="false" aria-controls="collapseWidthExample">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat-right-text-fill" viewBox="0 0 16 16">
+                  <path d="M16 2a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9.586a1 1 0 0 1 .707.293l2.853 2.853a.5.5 0 0 0 .854-.353V2zM3.5 3h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1 0-1zm0 2.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1 0-1zm0 2.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1 0-1z"/>
+                </svg>
+              </button>
+            </p>
+          </div>
+          
+          <div>
+          <div class="card border border-5 shadow-lg rounded-4 border-dark-subtle mx-auto collapse position-absolute bottom-0 end-0 z-3" style="width: 18rem;" id="collapseWidthExample">
+            <div class="card-body overflow-auto h-50 ">
+              <div class="row">
+                <div class="col-6"><h4 class="card-title fw-bold fs-3">聊天室</h4></div>
+              <div class="col-4 ms-auto"><button type="button" class="btn-close ms-5 text-end" aria-label="Close" data-bs-toggle="collapse" data-bs-target="#collapseWidthExample" aria-expanded="false" aria-controls="collapseWidthExample"></button></div>
+              </div>
+              
+              
+              
+              <div id="userList"></div>
+              <hr class="border border-2 opacity-50">
+            </div>
+            <div class="card m-2 border-0 overflow-auto" style="height: 300px">
+              <div class="card-body" id="messages">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                  <strong>成功連線</strong> 聊天開始!
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="input-group mb-3">
+                <input type="text" class="form-control" id="messageInput" placeholder="輸入訊息..." aria-label="輸入訊息..." aria-describedby="sendButton">
+                <button class="btn btn-primary" type="button" id="sendButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-90deg-right" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M14.854 4.854a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 4H3.5A2.5 2.5 0 0 0 1 6.5v8a.5.5 0 0 0 1 0v-8A1.5 1.5 0 0 1 3.5 5h9.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4z"/>
+                </svg></button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="col-sm-12 h-100">
+         <div id="map" class="w-100 h-100 border border-2 z-2"></div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script>
+    <script>
+    const messagesDiv = document.getElementById('messages');
+    const userListDiv = document.getElementById('userList');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const welcomeName = document.getElementById('welname');
+    let nameInput = prompt("請輸入你的名字: ");
+    const userMarkers = {};
+    const ws = new WebSocket('ws://localhost:8080');
+    if (nameInput) {
+    ws.onopen = event => {
+    console.log('連接websocekt成功!');
+    ws.send(JSON.stringify({type: 'name', message: nameInput}));// 傳送使用者名稱給伺服器
+    messageInput.disabled = false; // 解鎖訊息輸入框
+    sendButton.disabled = false; // 解鎖發送按鈕
+    };
+
+ws.onmessage = event => {
+
+  const objectMessage = JSON.parse(event.data);
+  
+  if(objectMessage.type === "userList"){
+    userListDiv.innerHTML = "";
+    let userList = objectMessage.message;
+    for(let i=0; i < userList.length; i++){
+        let jsonStringInArray = userList[i];
+        let userObject = JSON.parse(jsonStringInArray);
+        let messageValue = userObject.message;
+        
+        if (messageValue !== nameInput){
+          userListDiv.innerHTML +=  "<span class=\"badge rounded-pill text-bg-success m-1\">" + messageValue + "</span>";
+          
+        }else{
+          let myname = document.createElement('span');
+          myname.textContent = nameInput;
+          myname.classList.add('badge', 'rounded-pill', 'text-bg-primary', 'fw-bold', 'fs-6','m-1');
+          userListDiv.insertBefore(myname, userListDiv.firstChild);
+        }
+        
+    }
+}else if(objectMessage.type === "chat"){
+    let chatMsg = objectMessage.message;
+    let chatNameObject = JSON.parse(chatMsg[0]);
+    let chatMessageObject = chatMsg[1];
+
+    let msgName = chatNameObject.message;
+    let msgGet = chatMessageObject.message;
+    messagesDiv.innerHTML += "<p class=\"card-text  p-1\"><span class=\"fs-3 fw-bold\">" + msgName + "</span> 說<span class=\"fs-5 fw-bold text-secondary\">" + msgGet+ "<span></p>";
+}else if(objectMessage.type === "location"){
+  let userName = JSON.parse(objectMessage.message.message.user).message;
+  console.log(userName);
+  let latitude = objectMessage.message.message.lat;
+  let longitude = objectMessage.message.message.lng;
+  if(userMarkers[userName]){
+    userMarkers[userName].setLatLng([latitude, longitude]);
+  }else{
+    let customIcon = L.divIcon({
+      className: 'custom-icon',
+      html: '<div class="icon-inner">' + userName + '</div>'
+    });
+
+    userMarkers[userName] = L.marker([latitude, longitude], {icon: customIcon}).addTo(map);
+  }
+
+  userMarkers[userName].bindPopup('<div class="popup-content">' +
+    '<h6>' + userName + '</h6>' +
+    '<p>Latitude: ' + latitude + '</p>' +
+    '<p>Longitude: ' + longitude + '</p>' +
+    '</div>', {
+      className: 'custom-popup'
+    }).openPopup();
+  //let marker = L.marker([latitude, longitude]).addTo(map);
+  //marker.bindPopup(userName).openPopup();
+
+
+  //console.log('我接收到了，latitude: ' + objectMessage.message.message.lat + " longitude: " + objectMessage.message.message.lng + " user: " + getuser);
+  
+ 
+}
+};
+
+    ws.onclose = event => {
+    console.log('Disconnected from WebSocket server');
+    };
+    sendButton.addEventListener('click', () => {
+    const messageTest = messageInput.value;
+    if (messageTest) {
+      ws.send(JSON.stringify({type: 'chat', message: messageTest}));
+    messagesDiv.innerHTML += "<p class=\"card-text  fs-5 fw-bold text-secondary p-1 text-end\">" + messageTest +"</p>";
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messageInput.value = '';
+    }
+    });
+
+    messageInput.addEventListener("keypress", function(event){
+      if(event.key === "Enter"){
+        event.preventDefault();
+        sendButton.click();
+      }
+    })
+
+
+    } else {
+    alert("需要你的名字!");
+    }
+
+
+
+    // 初始化地圖
+var map = L.map('map').setView([0, 0], 13);
+
+// 使用 Leaflet 的 TileLayer 提供底圖
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+getLocationAndAddMarker();
+
+
+
+function sendLocation(latitude, longitude){
+  let posiData = {type: 'location', message: {lat: latitude, lng: longitude}};
+  console.log('從我這邊發出了: ' + posiData);
+  ws.send(JSON.stringify(posiData));
+  //ws.send(JSON.stringify(posiData));
+}
+
+
+let lastLatitude = 0;
+let lastLongitude = 0;
+function getLocationAndAddMarker() {
+  map.locate({
+      setView: false,
+      maxZoom: 16,
+      watch: true, // 自动更新位置
+      enableHighAccuracy: true, // 提高位置精度
+  });
+
+  map.on('locationfound', function(e) {
+      var latitude = e.latitude;
+      var longitude = e.longitude;
+
+      let distance = calculateDistance(latitude, longitude, lastLatitude, lastLongitude);
+
+      if(distance >= 10){
+        var marker = L.marker([latitude, longitude]).addTo(map);
+        marker.bindPopup(nameInput).openPopup();
+        sendLocation(latitude, longitude);
+        
+      }
+      // 在地图上添加标记
+      lastLatitude = latitude;
+      lastLongitude = longitude;
+  });
+
+  map.on('locationerror', function(e) {
+      console.error('定位失敗:', e.message);
+  });
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  var R = 6371000; // 地球半径（米）
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var distance = R * c;
+  return distance;
+}
+
+//setInterval(getLocation, 5000);
+    </script>
+  </body>
+</html>

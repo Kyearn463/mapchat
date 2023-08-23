@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Chat</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <div id="messages"></div>
+    <div id="userList"></div>
+    <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+    <button id="sendButton" disabled>Send</button>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const userListDiv = document.getElementById('userList');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        let nameInput = prompt("請輸入你的名字: ");
+
+        if (nameInput) {
+            const ws = new WebSocket('ws://localhost:8080');
+
+            ws.onopen = event => {
+                console.log('Connected to WebSocket server');
+                ws.send(nameInput); // 傳送使用者名稱給伺服器
+                messageInput.disabled = false; // 解鎖訊息輸入框
+                sendButton.disabled = false; // 解鎖發送按鈕
+            };
+
+            ws.onmessage = event => {
+                const message = event.data;
+
+                if (message.startsWith("Users in chat room:")) {
+                    userListDiv.innerHTML = '<p>' + message + '</p>';
+                } else {
+                    messagesDiv.innerHTML += '<p>' + message + '</p>';
+                }
+            };
+
+            ws.onclose = event => {
+                console.log('Disconnected from WebSocket server');
+            };
+
+            sendButton.addEventListener('click', () => {
+                const message = messageInput.value;
+                if (message) {
+                    ws.send(message);
+                    messageInput.value = '';
+                }
+            });
+        } else {
+            alert("Name is required. Please refresh and provide a name.");
+        }
+    </script>
+</body>
+</html>
